@@ -12,9 +12,13 @@ import json
 from bs4 import BeautifulSoup
 from bs4 import SoupStrainer
 
-__addon__ = xbmcaddon.Addon()
-__scriptid__   = __addon__.getAddonInfo('id')
-__baseURL__ = "http://www.addic7ed.com"
+__addon__       = xbmcaddon.Addon()
+__scriptid__    = __addon__.getAddonInfo('id')
+
+__profile__     = xbmc.translatePath(__addon__.getAddonInfo('profile')).decode('utf-8')
+__tempfolder__  = xbmc.translatePath(os.path.join(__profile__, 'temp', '')).decode('utf-8')
+
+__baseURL__     = "http://www.addic7ed.com"
 
 def get_params(string_params):
 	# Remove first ? from params
@@ -63,6 +67,7 @@ def get_show_id(showName):
 def build_show_url(showId, showSeason):
 	# show_url = __baseURL__ + "/show/" + showId + "/season/" + showSeason
 	show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + "|1|"
+  # print(show_url)
 	return show_url
 
 def subs_array(showURL, showDetails):
@@ -76,50 +81,72 @@ def subs_array(showURL, showDetails):
 	subs = []
 	for row in soup.find('table').tbody.findAll('tr'):
 		if (not row.has_attr("height")) and (row.contents[1].text == str(showDetails['episode'])):
-			if not row.contents[6].text == "":
+			if not row.contents[6].text:
 				hi = "true"
 			else:
 				hi = "false"
 
 			sub = {
-				"season": 		row.contents[0].text,
-				"episode": 		row.contents[1].text,
-				"episodeTitle":	row.contents[2].contents[0].text,
-				"showTitle":	showDetails["showtitle"],
-				"lang":			row.contents[3].text,
-				"version":		row.contents[4].text,
-				"hi":			hi,
-				"link":			row.find_all('a')[1].get('href'),
+				"season": 		    row.contents[0].text,
+				"episode": 		    row.contents[1].text,
+				"episodeTitle":	    row.contents[2].contents[0].text,
+				"showTitle":	    showDetails["showtitle"],
+				"lang":			    row.contents[3].text,
+				"version":		    row.contents[4].text,
+				"hi":			    hi,
+				"link":			    row.find_all('a')[1].get('href'),
 			}
 			subs.append(sub.copy())
 	return subs
 
 def create_list(subs):
-	for sub in subs:
-		listitem = xbmcgui.ListItem(label = sub["lang"],
-									label2	= "[" + str(sub["version"]) + "]" +
-										str(sub["showTitle"]) + " - " + str(sub["episodeTitle"]) + " " +
-										"S" + str(sub["season"]) + "E" + str(format(int(sub["episode"]), '02d')),
-									iconImage = "",
-									thumbnailImage = xbmc.convertLanguage(sub['lang'], xbmc.ISO_639_1))
-		# listitem.setProperty("hearing_imp", "true")
-		# url = "plugin://%s/?action=download&link=%s&ID=%s&filename=%s&format=%s" % (__scriptid__,
-  #                                                                         "",
-  #                                                                         "",
-  #                                                                         "",
-  #                                                                         "",
-  #                                                                         )
-		xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url="plugin://",listitem=listitem,isFolder=False)
+    for sub in subs:
+        filename = "[" + str(sub["version"]) + "]" + str(sub["showTitle"]) + " - " + str(sub["episodeTitle"]) + " " + "S" + str(sub["season"]) + "E" + str(format(int(sub["episode"]), "02d"))
+        listitem = xbmcgui.ListItem(label = sub["lang"],
+        							label2	= filename,
+        							iconImage = "",
+        							thumbnailImage = xbmc.convertLanguage(sub['lang'], xbmc.ISO_639_1))
+        listitem.setProperty("hearing_imp", sub["hi"])
+        url = "plugin://%s/?action=download&link=%s&filename=%s" % (__scriptid__, sub["link"], filename)
+        xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=url,listitem=listitem,isFolder=False)
 
+def get_sub(link):
+    response = urllib2.urlopen(__baseURL__ + link)
+    return response.read()
+
+def download(link, filename):
+    sub_file = []
+
+    if xbmcvfs.exists(__tempfolder__):
+        shutil.rmtree(__tempfolder__)
+    xbmcvfs.mkdirs(__tempfolder__)
+
+    file = os.path.join(__tempfolder__, filename)
+    dfile = get_sub(link)
+
+    file_handler = open(file, "wb")
+    file_handler.write(dfile)
+    file_handler.close
+
+    sub_file.append(file)
+
+    return sub_file
 
 params = get_params(sys.argv[2])
 for x in params:
 	print(x + ':' + params[x])
 
-show_details = get_details_from_player()
-show_id = get_show_id(show_details['showtitle'])
-showURL = build_show_url(show_id, show_details['season'])
-subs = subs_array(showURL, show_details)
-create_list(subs)
+if params["action"] == "search":
+    show_details = get_details_from_player()
+    show_id = get_show_id(show_details['showtitle'])
+    showURL = build_show_url(show_id, show_details['season'])
+    subs = subs_array(showURL, show_details)
+    create_list(subs)
+elif params["action"] == "download":
+    subs = download(params["link"], params["filename"])
+    for sub in subs:
+        listitem = xbmcgui.ListItem(label=sub)
+        xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=sub, listitem=listitem, isFolder=False)
 
 xbmcplugin.endOfDirectory(int(sys.argv[1]))
+
