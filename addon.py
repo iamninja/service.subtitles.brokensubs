@@ -9,6 +9,7 @@ import xbmcvfs
 import uuid
 import json
 
+import requests
 from bs4 import BeautifulSoup
 from bs4 import SoupStrainer
 
@@ -66,9 +67,9 @@ def get_show_id(showName):
 
 def build_show_url(showId, showSeason):
 	# show_url = __baseURL__ + "/show/" + showId + "/season/" + showSeason
-	show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + "|1|"
+  show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + "|1|"
   # print(show_url)
-	return show_url
+  return show_url
 
 def subs_array(showURL, showDetails):
 	# Get source
@@ -111,8 +112,16 @@ def create_list(subs):
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=url,listitem=listitem,isFolder=False)
 
 def get_sub(link):
-    response = urllib2.urlopen(__baseURL__ + link)
-    return response.read()
+    url = __baseURL__ + link
+    rheaders = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, sdch',
+    'Connection': 'keep-alive',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2715.0 Safari/537.36',
+    'Host': 'www.addic7ed.com',
+    'Referer': 'http://www.addic7ed.com'}
+    r = requests.get(url, headers = rheaders)
+    return r.text
 
 def download(link, filename):
     sub_file = []
@@ -143,7 +152,8 @@ if params["action"] == "search":
     subs = subs_array(showURL, show_details)
     create_list(subs)
 elif params["action"] == "download":
-    subs = download(params["link"], params["filename"])
+    fname = params["filename"].replace(" ", "_") + ".srt"
+    subs = download(params["link"], fname)
     for sub in subs:
         listitem = xbmcgui.ListItem(label=sub)
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=sub, listitem=listitem, isFolder=False)
