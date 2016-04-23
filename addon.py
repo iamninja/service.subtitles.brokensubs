@@ -67,38 +67,39 @@ def get_show_id(showName):
 
 def build_show_url(showId, showSeason):
 	# show_url = __baseURL__ + "/show/" + showId + "/season/" + showSeason
-  show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + "|1|"
+  show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + "|1|8|"
   # print(show_url)
   return show_url
 
 def subs_array(showURL, showDetails):
-	# Get source
-	source = urllib2.urlopen(showURL).read()
+  # Get source
+  source = urllib2.urlopen(showURL).read()
 
-	# Make the soup
-	soup = BeautifulSoup(source, "html.parser")
-	# Iterate through rows of first table
-	# and generate array with subs details
-	subs = []
-	for row in soup.find('table').tbody.findAll('tr'):
-		if (not row.has_attr("height")) and (row.contents[1].text == str(showDetails['episode'])):
-			if not row.contents[6].text:
-				hi = "true"
-			else:
-				hi = "false"
+  # Make the soup
+  soup = BeautifulSoup(source, "html.parser")
+  print(soup)
+  # Iterate through rows of first table
+  # and generate array with subs details
+  subs = []
+  for row in soup.find('table').tbody.findAll('tr'):
+    if (not row.has_attr("height")) and (row.contents[1].text == str(showDetails['episode'])):
+      if not row.contents[6].text:
+        hi = "true"
+      else:
+        hi = "false"
 
-			sub = {
-				"season": 		    row.contents[0].text,
-				"episode": 		    row.contents[1].text,
-				"episodeTitle":	    row.contents[2].contents[0].text,
-				"showTitle":	    showDetails["showtitle"],
-				"lang":			    row.contents[3].text,
-				"version":		    row.contents[4].text,
-				"hi":			    hi,
-				"link":			    row.find_all('a')[1].get('href'),
-			}
-			subs.append(sub.copy())
-	return subs
+      sub = {
+      "season": 		    row.contents[0].text,
+      "episode": 		    row.contents[1].text,
+      "episodeTitle":	    row.contents[2].contents[0].text,
+      "showTitle":	    showDetails["showtitle"],
+      "lang":			    row.contents[3].text,
+      "version":		    row.contents[4].text,
+      "hi":			    hi,
+      "link":			    row.find_all('a')[1].get('href'),
+      }
+      subs.append(sub.copy())
+  return subs
 
 def create_list(subs):
     for sub in subs:
@@ -134,7 +135,7 @@ def download(link, filename):
     dfile = get_sub(link)
 
     file_handler = open(file, "wb")
-    file_handler.write(dfile)
+    file_handler.write(dfile.encode('UTF-8'))
     file_handler.close
 
     sub_file.append(file)
