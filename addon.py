@@ -110,7 +110,7 @@ def subs_array(showURL, showDetails):
   subs = []
   for row in soup.find('table').tbody.findAll('tr'):
     if (not row.has_attr("height")) and (row.contents[1].text == str(showDetails['episode'])):
-      if row.contents[6].text.encode('UTF-8') == u'\u2714':
+      if row.contents[7].text.encode('UTF-8') != u'':
         hi = 'true'
       else:
         hi = 'false'
@@ -125,7 +125,6 @@ def subs_array(showURL, showDetails):
       "hi":			    hi,
       "link":			    row.find_all('a')[1].get('href'),
       }
-      # print("HI:" + row.contents[6].text)
       subs.append(sub.copy())
   return subs
 
@@ -137,8 +136,6 @@ def create_list(subs):
         							iconImage = "",
         							thumbnailImage = xbmc.convertLanguage(sub['lang'], xbmc.ISO_639_1))
         listitem.setProperty("hearing_imp", sub["hi"])
-        print(filename)
-        url = ''
         url = u'plugin://' + __scriptid__ + u'/?action=download&link=' + sub["link"] + u'&filename=' + filename.decode('utf8')
         # url = u'plugin://%s/?action=download&link=%s&filename=%s' % (__scriptid__.encode('utf8'), sub["link"].encode('utf8'), str(filename.encode('utf8')))
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=url,listitem=listitem,isFolder=False)
