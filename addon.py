@@ -125,18 +125,22 @@ def subs_array(showURL, showDetails):
       "hi":			    hi,
       "link":			    row.find_all('a')[1].get('href'),
       }
+      # print("HI:" + row.contents[6].text)
       subs.append(sub.copy())
   return subs
 
 def create_list(subs):
     for sub in subs:
-        filename = "[" + str(sub["version"]) + "]" + str(sub["showTitle"]) + " - " + str(sub["episodeTitle"]) + " " + "S" + str(sub["season"]) + "E" + str(format(int(sub["episode"]), "02d"))
+        filename = "[" + str(sub["version"].encode('utf8')) + "]" + str(sub["showTitle"].encode('utf8')) + " - " + str(sub["episodeTitle"].encode('utf8')) + " " + "S" + str(sub["season"]) + "E" + str(format(int(sub["episode"]), "02d"))
         listitem = xbmcgui.ListItem(label = sub["lang"],
         							label2	= filename,
         							iconImage = "",
         							thumbnailImage = xbmc.convertLanguage(sub['lang'], xbmc.ISO_639_1))
         listitem.setProperty("hearing_imp", sub["hi"])
-        url = "plugin://%s/?action=download&link=%s&filename=%s" % (__scriptid__, sub["link"], filename)
+        print(filename)
+        url = ''
+        url = u'plugin://' + __scriptid__ + u'/?action=download&link=' + sub["link"] + u'&filename=' + filename.decode('utf8')
+        # url = u'plugin://%s/?action=download&link=%s&filename=%s' % (__scriptid__.encode('utf8'), sub["link"].encode('utf8'), str(filename.encode('utf8')))
         xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=url,listitem=listitem,isFolder=False)
 
 def get_sub(link):
@@ -158,7 +162,7 @@ def download(link, filename):
         shutil.rmtree(__tempfolder__)
     xbmcvfs.mkdirs(__tempfolder__)
 
-    file = os.path.join(__tempfolder__, filename)
+    file = os.path.join(__tempfolder__, filename.decode('utf8'))
     dfile = get_sub(link)
 
     file_handler = open(file, "wb")
