@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="script.service.brokensubs" name="BrokenSubs" version="0.0.1" provider-name="iamninja">
+<addon id="script.service.brokensubs" name="BrokenSubs" version="0.1.2" provider-name="iamninja">
 	<requires>
 		<import addon="xbmc.python" version="2.14.0" />
 		<import addon="script.module.beautifulsoup4" version="4.3.2"/>
@@ -8,7 +8,7 @@
 	<extension point="xbmc.subtitle.module" library="addon.py" />
 	<extension point="xbmc.addon.metadata">
 		<summary lang="en">Brokenspacebars subtitle service</summary>
-		<description lang="en">A subtitle service for Kodi</description>
+		<description lang="en">A subtitle service for Kodi. Download subtittles from addic7ed.com</description>
 		<disclaimer lang="en"></disclaimer>
 		<email>bagios234@gmail.com</email>
 		<platform>all</platform>
