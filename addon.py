@@ -21,6 +21,33 @@ __tempfolder__  = xbmc.translatePath(os.path.join(__profile__, 'temp', '')).deco
 
 __baseURL__     = "http://www.addic7ed.com"
 
+def get_language_code(language):
+  switcher = {
+    "English":    "1",
+    "Spanish":    "4",
+    "Italian":    "7",
+    "French":     "8",
+    "Portoguese": "9",
+    "Turkish":    "16",
+    "Dutch":      "17",
+    "Russian":    "19",
+    "Romanian":   "26",
+    "Greek":      "27",
+    "Bulgarian":  "35",
+    "Arabic":     "38"
+  }
+  return switcher.get(language, '')
+
+def build_language_code_string(languages):
+  code_string = "|"
+  for language in languages:
+    code = get_language_code(language)
+    if code != "":
+      code_string += code + "|"
+  if code_string == "|":
+    code_string = "|1|"
+  return code_string
+
 def get_params(string_params):
 	# Remove first ? from params
 	string_params = string_params[1:]
@@ -28,8 +55,8 @@ def get_params(string_params):
 	params = {}
 	params = (q.split('=') for q in string_params.split('&'))
 
-	dicti = dict((key, value) for (key, value) in params)
-	return dicti
+	params_in_dictionary = dict((key, value) for (key, value) in params)
+	return params_in_dictionary
 
 def get_details_from_player():
 	# Create request
@@ -65,9 +92,9 @@ def get_show_id(showName):
 
 	return showTag['value']
 
-def build_show_url(showId, showSeason):
+def build_show_url(showId, showSeason, language_code_string):
 	# show_url = __baseURL__ + "/show/" + showId + "/season/" + showSeason
-  show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + "|1|8|"
+  show_url = __baseURL__ + "/ajax_loadShow.php?" + "show=" + str(showId) + "&season=" + str(showSeason) + "&langs=" + language_code_string
   # print(show_url)
   return show_url
 
@@ -77,16 +104,16 @@ def subs_array(showURL, showDetails):
 
   # Make the soup
   soup = BeautifulSoup(source, "html.parser")
-  print(soup)
+  # print(soup)
   # Iterate through rows of first table
   # and generate array with subs details
   subs = []
   for row in soup.find('table').tbody.findAll('tr'):
     if (not row.has_attr("height")) and (row.contents[1].text == str(showDetails['episode'])):
-      if not row.contents[6].text:
-        hi = "true"
+      if row.contents[6].text.encode('UTF-8') == u'\u2714':
+        hi = 'true'
       else:
-        hi = "false"
+        hi = 'false'
 
       sub = {
       "season": 		    row.contents[0].text,
@@ -144,12 +171,14 @@ def download(link, filename):
 
 params = get_params(sys.argv[2])
 for x in params:
-	print(x + ':' + params[x])
+	print(x + ':' + params[x].replace("%2c", ","))
 
 if params["action"] == "search":
+    languages = params["languages"].replace("%2c", ",").split(",")
+    language_code_string = build_language_code_string(languages)
     show_details = get_details_from_player()
     show_id = get_show_id(show_details['showtitle'])
-    showURL = build_show_url(show_id, show_details['season'])
+    showURL = build_show_url(show_id, show_details['season'], language_code_string)
     subs = subs_array(showURL, show_details)
     create_list(subs)
 elif params["action"] == "download":
