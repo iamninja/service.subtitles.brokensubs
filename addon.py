@@ -61,21 +61,24 @@ def get_params(string_params):
 	return params_in_dictionary
 
 def get_details_from_player():
-	# Create request
-	request = {
-		"jsonrpc": "2.0",
-		"method": "Player.GetItem",
-		"params": {
-			"properties": ["showtitle", "season", "episode", "duration", "file"],
-			"playerid": 1
-		},
-		"id": "VideoGetItem"
-	}
-	# Make request
-	response = xbmc.executeJSONRPC(json.dumps(request))
-	print(response)
-	parsed_response = json.loads(response)['result']['item']
-	return parsed_response
+  # Create request
+  request = {
+    "jsonrpc": "2.0",
+    "method": "Player.GetItem",
+    "params": {
+      "properties": ["showtitle", "season", "episode", "duration", "file"],
+      "playerid": 1
+    },
+    "id": "VideoGetItem"
+  }
+  # Make request
+  response = xbmc.executeJSONRPC(json.dumps(request))
+  print(response)
+  parsed_response = json.loads(response)['result']['item']
+  print("---------")
+  print(parsed_response)
+  print("---------")
+  return parsed_response
 
 def get_show_id(showName):
 	# Get source
@@ -177,14 +180,14 @@ def create_subs_list(subs):
     # url = u'plugin://%s/?action=download&link=%s&filename=%s' % (__scriptid__.encode('utf8'), sub["link"].encode('utf8'), str(filename.encode('utf8')))
     xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]),url=url,listitem=listitem,isFolder=False)
 
-def create_episodes_list(episodes):
+def create_episodes_list(episodes, languages, preferredlanguage):
   listitem = xbmcgui.ListItem(label2 = "Select an episode to view its subtitles.")
   xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url="", listitem=listitem, isFolder=True)
   for episode in episodes:
     listitem = xbmcgui.ListItem(label2 = episode['name'])
-    # url = u'plugin://' + __scriptid__ + u'/?action=manualsearch2&link=' + sub["link"] + u'&episodename=' + episode['name'].decode('utf8') + u'&epidodelink=' + episode['link'].decode['utf8']
-    url = ""
-    xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=True)
+    url = u'plugin://' + __scriptid__ + u'/?action=search' + u'&episodename=' + episode['name'] + u'&episodelink=' + episode['href'] + u'&languages=' + languages + u'&preferredlanguage=' + preferredlanguage + u'&aftermanual=true'
+    # url = ""
+    xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=listitem, isFolder=False)
 
 def get_sub(link):
   url = __baseURL__ + link
@@ -197,6 +200,10 @@ def get_sub(link):
   'Referer': 'http://www.addic7ed.com'}
   r = requests.get(url, headers = rheaders)
   return r.text
+
+def get_details_from_episode_url(url):
+  url_in_array = url.split("/")
+  return url_in_array
 
 def download(link, filename):
   sub_file = []
@@ -221,13 +228,27 @@ for x in params:
 	print(x + ':' + params[x].replace("%2c", ","))
 
 if params["action"] == "search":
-  languages = params["languages"].replace("%2c", ",").split(",")
-  language_code_string = build_language_code_string(languages)
-  show_details = get_details_from_player()
-  show_id = get_show_id(show_details['showtitle'])
-  showURL = build_show_url(show_id, show_details['season'], language_code_string)
-  subs = subs_array(showURL, show_details)
-  create_subs_list(subs)
+  if 'aftermanual' in params:
+    details_array = get_details_from_episode_url(params['episodelink'])
+    languages = params["languages"].replace("%2c", ",").split(",")
+    language_code_string = build_language_code_string(languages)
+    show_details = {
+      'episode':    details_array[3],
+      'season':     details_array[2],
+      'showtitle':  details_array[1]
+    }
+    show_id = get_show_id(show_details['showtitle'])
+    showURL = build_show_url(show_id, show_details['season'], language_code_string)
+    subs = subs_array(showURL, show_details)
+    create_subs_list(subs)
+  else:
+    languages = params["languages"].replace("%2c", ",").split(",")
+    language_code_string = build_language_code_string(languages)
+    show_details = get_details_from_player()
+    show_id = get_show_id(show_details['showtitle'])
+    showURL = build_show_url(show_id, show_details['season'], language_code_string)
+    subs = subs_array(showURL, show_details)
+    create_subs_list(subs)
 elif params["action"] == "download":
   fname = params["filename"].replace(" ", "_") + ".srt"
   subs = download(params["link"], fname)
@@ -236,7 +257,7 @@ elif params["action"] == "download":
     xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=sub, listitem=listitem, isFolder=False)
 elif params["action"] == "manualsearch":
   episodes = episodes_array(params['searchstring'])
-  create_episodes_list(episodes)
+  create_episodes_list(episodes, params['languages'], params['preferredlanguage'])
 
 
 xbmcplugin.endOfDirectory(int(sys.argv[1]))
