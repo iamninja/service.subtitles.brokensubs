@@ -5,6 +5,7 @@
 /.idea
 /.project
 /.pydevproject
+/.vscode
 /.settings
 Thumbs.db
 *~
