@@ -1,12 +1,20 @@
+# Python
 *.pyc
 *.pyo
-.DS*
+
+# Pylint
 .pylint_rc
+
+# IDE/Editor files
 /.idea
 /.project
 /.pydevproject
 /.vscode
 /.settings
+
+# OS
+.DS*
 Thumbs.db
+
 *~
 .cache

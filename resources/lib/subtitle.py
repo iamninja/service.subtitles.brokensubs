@@ -9,6 +9,7 @@ import os
 import unicodedata
 import re
 import logging
+import codecs
 import xbmcgui
 import xbmcplugin
 import xbmc
@@ -70,8 +71,11 @@ def get_info():
         # no original title, get just Title
         item['title'] = normalize_string(xbmc.getInfoLabel("VideoPlayer.Title"))
         logging.debug(item['title'])
+        logging.debug(item['season'])
+        logging.debug(item['episode'])
         # If you didn't get any season, episode or tvshow before try and get it from title.
-        (season, episode) = re.search(r"\bS(\d.)+E(\d+)\b", item['title']).group(1, 2)
+        regex = re.search(r"\bS(\d.)+E(\d+)\b", item['title'])
+        (season, episode) = regex.group(1, 2) if (regex is not None) else ("", "")
         item['season'] = season if item['season'] == '' else item['season']
         item['episode'] = episode if item['episode'] == '' else item['episode']
         if item['tvshow'] == '':
@@ -119,10 +123,13 @@ def get_languages(params, lang_format = 2):
     langs = []  # ['scc','eng']
     for lang in urllib.unquote(params['languages']).decode('utf-8').split(","):
         if lang_format == 0:
+            # Full language name
             langs.append(lang)
         elif lang_format == 1:
+            # 2 letter format
             langs.append(xbmc.convertLanguage(lang, xbmc.ISO_639_1))
         else:
+            # 3 letter format
             langs.append(xbmc.convertLanguage(lang, xbmc.ISO_639_2))
     return langs
 
@@ -150,10 +157,6 @@ def append_subtitle(subname, lang_name, language, params, sync=False, h_impaired
 
 def search(info, languages):
     """Add subtitles to the list using information gathered with get_info and get_languages"""
-    append_subtitle(
-        "Lost 1x01", "English", "eng", {"action": "download", "id": 15}, sync=True)
-    append_subtitle("Lost 1x01", "Italian", "ita", {"action": "download", "id": 16})
-    append_subtitle("Lost 1x01 720p", "English", "eng", {"action": "download", "id": 17})
     logging.debug("---TUCAN---")
     logging.debug(info)
     url = addictedutils.build_show_url(
@@ -161,6 +164,22 @@ def search(info, languages):
         info['season'],
         addictedutils.build_language_code_string(languages))
     logging.debug(url)
+    subs = addictedutils.subs_array(url, info)
+    #logging.debug(subs)
+    for sub in subs:
+        sub_name = sub['showTitle'] + " " + sub['season'] + "x" + sub['episode'] + " " + sub['version']
+        sub_params = {
+            "action": "download-addicted",
+            "link": sub['link'],
+            "name": sub_name
+        }
+        append_subtitle(
+            sub_name,
+            sub['lang'],
+            xbmc.convertLanguage(sub['lang'], xbmc.ISO_639_2),
+            sub_params,
+            sub['sync'],
+            sub['himp'])
 
     #addictedutils.get_details_from_player()
 
@@ -179,10 +198,22 @@ def download(params):
     file = os.path.join(TEMP, "{id}.srt".format(id=id))
 
     response = urllib2.urlopen(url)
-    with open(file, "w") as local_file:
+    with codecs.open(file, "w", "utf-8") as local_file:
         local_file.write(response.read())
 
     # give the file to kodi
+    xbmcplugin.addDirectoryItem(
+        handle=HANDLE, url=file, listitem=xbmcgui.ListItem(label=file), isFolder=False)
+
+def download_addicted(params):
+    """Download the subtitle from addic7ed.com"""
+    file = os.path.join(TEMP, params['name'] + ".srt")
+    dfile = addictedutils.download_subtitle(params['link'])
+
+    with open(file, 'wb',) as local_file:
+        local_file.write(dfile.encode('utf-8'))
+
+    # Give the file to kodi
     xbmcplugin.addDirectoryItem(
         handle=HANDLE, url=file, listitem=xbmcgui.ListItem(label=file), isFolder=False)
 
@@ -203,5 +234,9 @@ def run():
             # If the action is 'download' use the info provided to download the subtitle and give
             # the file path to kodi
             download(params)
+        elif params['action'] == "download-addicted":
+            # If the action is 'download' use the info provided to download the subtitle and give
+            # the file path to kodi
+            download_addicted(params)
 
     xbmcplugin.endOfDirectory(HANDLE)
